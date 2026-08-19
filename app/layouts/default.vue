@@ -10,7 +10,7 @@
         <!-- Logo -->
         <NuxtLink to="/" class="flex shrink-0 items-center gap-2" aria-label="Protesk home">
           <NuxtImg
-            src="/Logo.png"
+            src="/logo.png"
             alt="Protesk logo"
             width="36"
             height="36"
@@ -307,7 +307,7 @@
           <div>
             <NuxtLink to="/" class="inline-flex items-center gap-2" aria-label="Protesk home">
               <NuxtImg
-                src="/Logo.png"
+                src="/logo.png"
                 alt="Protesk logo"
                 width="36"
                 height="36"
