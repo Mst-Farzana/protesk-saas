@@ -70,48 +70,13 @@ export default defineNuxtConfig({
   sitemap: {
     enabled: true,
     exclude: ['/admin/**', '/login', '/register', '/confirm', '/api/**'],
-    urls: async () => {
-      // Dynamic product URLs
-      const { prisma } = await import('./server/utils/prisma');
-      const products: { id: string; updatedAt: Date }[] = await prisma.product
-        .findMany({ select: { id: true, updatedAt: true } })
-        .catch(() => [] as { id: string; updatedAt: Date }[]);
-
-      return [
-        { loc: '/', lastmod: new Date(), changefreq: 'weekly' as const, priority: 1 as const },
-        {
-          loc: '/cart',
-          lastmod: new Date(),
-          changefreq: 'monthly' as const,
-          priority: 0.5 as const,
-        },
-        {
-          loc: '/checkout',
-          lastmod: new Date(),
-          changefreq: 'monthly' as const,
-          priority: 0.6 as const,
-        },
-        {
-          loc: '/about',
-          lastmod: new Date(),
-          changefreq: 'monthly' as const,
-          priority: 0.7 as const,
-        },
-        {
-          loc: '/contact',
-          lastmod: new Date(),
-          changefreq: 'monthly' as const,
-          priority: 0.6 as const,
-        },
-        // ✅ Dynamic product pages
-        ...products.map(p => ({
-          loc: `/products/${p.id}`,
-          lastmod: p.updatedAt,
-          changefreq: 'daily' as const,
-          priority: 0.8 as const,
-        })),
-      ];
-    },
+    urls: [
+      { loc: '/', changefreq: 'weekly', priority: 1.0 },
+      { loc: '/cart', changefreq: 'monthly', priority: 0.5 },
+      { loc: '/checkout', changefreq: 'monthly', priority: 0.6 },
+      { loc: '/about', changefreq: 'monthly', priority: 0.7 },
+      { loc: '/contact', changefreq: 'monthly', priority: 0.6 },
+    ],
   },
 
   ogImage: {
@@ -228,7 +193,7 @@ export default defineNuxtConfig({
     // ✅ Prisma optimization
     esbuild: {
       options: {
-        target: 'es2022',
+        target: 'esnext',
       },
     },
   },

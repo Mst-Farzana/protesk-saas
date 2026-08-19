@@ -1,16 +1,20 @@
-import { PrismaClient } from '@prisma/client';
+// ✅ ESM-safe import for Vercel/Nitro
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as prismaModule from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+// Extract PrismaClient from the namespace
+const PrismaClient = prismaModule.PrismaClient;
 
-function createPrismaClient(): PrismaClient {
+const globalForPrisma = globalThis as unknown as { prisma?: InstanceType<typeof PrismaClient> };
+
+function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
-    throw new Error('DATABASE_URL is not defined');
+    throw new Error('DATABASE_URL is not defined in environment variables');
   }
 
-  // 🚨 Prisma 7: Driver Adapter ছাড়া চলবে না
+  // 🚨 Prisma Driver Adapter
   const adapter = new PrismaPg({ connectionString });
 
   return new PrismaClient({
