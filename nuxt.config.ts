@@ -46,7 +46,7 @@ export default defineNuxtConfig({
   // },
 
   image: {
-    provider: 'ipx',
+    provider: 'vercel',
     format: ['webp', 'avif'],
     quality: 80,
 
