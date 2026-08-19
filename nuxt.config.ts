@@ -122,14 +122,14 @@ export default defineNuxtConfig({
     // OpenAI - SERVER ONLY
     openaiApiKey: process.env.NUXT_OPENAI_API_KEY || process.env.OPENAI_API_KEY || '',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
-    geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
 
     resendApiKey: process.env.NUXT_RESEND_API_KEY || '',
 
     public: {
       stripePublishableKey: process.env.NUXT_STRIPE_PUBLISHABLE_KEY || '',
 
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://protesk.com',
     },
   },
   // ✅ Route-level caching & optimization

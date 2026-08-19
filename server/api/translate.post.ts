@@ -1,7 +1,8 @@
 import { defineEventHandler, readBody } from 'h3';
 
 export default defineEventHandler(async event => {
-  const config = useRuntimeConfig();
+  // ✅ Pass event to useRuntimeConfig for better context isolation
+  const config = useRuntimeConfig(event);
   const { texts, target } = await readBody<{ texts: string[]; target: string }>(event);
 
   if (!texts?.length) {
@@ -14,34 +15,41 @@ export default defineEventHandler(async event => {
   const apiKey = config.geminiApiKey;
   if (!apiKey) {
     console.error('❌ [translate] GEMINI_API_KEY missing in runtimeConfig!');
-    console.error('   Check: .env file has GEMINI_API_KEY=xxx');
-    console.error('   Check: nuxt.config.ts has geminiApiKey in runtimeConfig');
     return { translations: texts };
   }
 
-  const model = config.geminiModel || 'gemini-2.0-flash';
+  // ✅ ফলব্যাক মডেল gemini-1.5-flash করা হলো (সবচেয়ে স্থিতিশীল)
+  const model = config.geminiModel || 'gemini-1.5-flash';
   console.log(`📡 [translate] Using model: ${model}`);
 
+  const prompt =
+    `Translate this JSON array of strings to ${target}. ` +
+    `Keep the exact same order and length. ` +
+    `Return ONLY a valid JSON array of strings, with no markdown formatting or explanations.\n` +
+    JSON.stringify(texts);
+
   try {
-    const prompt =
-      `Translate this JSON array of strings to ${target}. ` +
-      `Keep same order and same length. Return ONLY a valid JSON array.\n` +
-      JSON.stringify(texts);
+    // ✅ Timeout setup (e.g., 15 seconds) to prevent serverless function hangs
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
+          contents: [{ parts: [{ text: prompt }] }],
+          // ✅ Native JSON mode ensures the output is always parseable JSON
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
         }),
       }
     );
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -60,18 +68,18 @@ export default defineEventHandler(async event => {
 
     if (!raw) {
       console.error('❌ [translate] Empty response from Gemini');
-      console.log('   Full response:', JSON.stringify(data, null, 2));
       return { translations: texts };
     }
 
-    const match = raw.match(/\[[\s\S]*\]/);
-    if (!match) {
-      console.error('❌ [translate] No JSON array found in response');
-      console.log('   Raw response:', raw.substring(0, 200));
+    // ✅ With responseMimeType: 'application/json', parsing is now much safer
+    // We still keep a fallback regex just in case the model adds minor text
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error('❌ [translate] No JSON array found in response. Raw:', raw);
       return { translations: texts };
     }
 
-    const arr = JSON.parse(match[0]);
+    const arr = JSON.parse(jsonMatch[0]);
 
     if (!Array.isArray(arr)) {
       console.error('❌ [translate] Response is not an array');
@@ -80,15 +88,17 @@ export default defineEventHandler(async event => {
 
     if (arr.length !== texts.length) {
       console.error(`❌ [translate] Length mismatch: sent ${texts.length}, got ${arr.length}`);
-      console.log('   Sent:', texts.slice(0, 3), '...');
-      console.log('   Received:', arr.slice(0, 3), '...');
       return { translations: texts };
     }
 
     console.log(`✅ [translate] Successfully translated ${arr.length} strings`);
     return { translations: arr };
   } catch (e: any) {
-    console.error('❌ [translate] Network/fetch error:', e.message || e);
+    if (e.name === 'AbortError') {
+      console.error('❌ [translate] Request timed out');
+    } else {
+      console.error('❌ [translate] Network/fetch error:', e.message || e);
+    }
     return { translations: texts };
   }
 });
