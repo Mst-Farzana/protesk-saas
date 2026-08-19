@@ -1,51 +1,75 @@
-# Protesk SaaS
+# 🛍️ Protesk SaaS - Modern E-Commerce Platform
 
-This project is a Nuxt-based e-commerce platform with a modern storefront, admin panel, Stripe checkout, and an AI-powered shopping assistant.
+A production-ready, full-stack e-commerce SaaS application built with modern technologies.
 
-## AI-native architecture
+![Nuxt.js](https://img.shields.io/badge/Nuxt.js-00DC82?style=for-the-badge&logo=nuxtdotjs&logoColor=white)
+![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 
-The app now keeps its current e-commerce and admin flows intact while adding an AI layer in three places:
+## ✨ Features
 
-- `app/pages/index.vue` - storefront AI assistant UI
-- `server/api/ai/recommendations.post.ts` - AI recommendation endpoint
-- `server/utils/ai.js` - OpenAI integration with safe fallback logic
+### 🛒 E-Commerce Core
+- ✅ Complete product catalog with categories
+- ✅ Shopping cart and checkout system
+- ✅ Order management and tracking
+- ✅ Inventory management
+- ✅ Customer accounts and authentication
 
-This means the project remains fully functional even when OpenAI is not configured, and it automatically switches to rule-based recommendations.
+### 💳 Payment Integration
+- 🔒 Stripe payment gateway
+- 🔒 Secure transaction processing
+- 🔒 Multiple payment methods support
 
-## Environment variables
+###  AI-Powered Features
+-  AI chatbot for customer support
+-  Automated responses
+- 🤖 Custom trained for your business
 
-Create a `.env` file with:
+### 🎨 Design & UX
+- 🎨 Modern, responsive design
+- 🎨 Mobile-first approach
+-  Tailwind CSS styling
+-  SEO optimized
 
-```bash
-OPENAI_API_KEY=your_openai_api_key
+### 🔧 Admin Panel
+- 📊 Comprehensive dashboard
+- 📊 Product management
+- 📊 Order tracking
+- 📊 Sales analytics
+-  Customer management
 
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-NUXT_SUPABASE_SECRET_KEY=your_supabase_secret_key
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-SITE_URL=http://localhost:3000
-```
+## 🚀 Tech Stack
 
-## Local development
+### Frontend
+- **Nuxt.js 3** - Vue.js framework with SSR
+- **Vue.js 3** - Composition API
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Utility-first CSS
+- **Pinia** - State management
 
-```bash
-pnpm install
-pnpm dev
-```
+### Backend
+- **Node.js** - Runtime environment
+- **PostgreSQL** - Database
+- **Supabase** - Backend-as-a-Service
+- **Prisma** - ORM
 
-## Production build
+### Integrations
+- **Stripe** - Payment processing
+- **OpenAI** - AI chatbot
+- **Resend** - Email services
 
-```bash
-pnpm build
-pnpm preview
-```
+## 📋 Prerequisites
 
-## AI usage flow
+Before you begin, ensure you have the following installed:
+- Node.js (v18 or higher)
+- npm or pnpm
+- PostgreSQL database
+- Supabase account
 
-1. User writes a shopping prompt like “best value under $250”
-2. The frontend sends the prompt to `/api/ai/recommendations`
-3. The server queries the product catalog and asks OpenAI for ranked suggestions
-4. If OpenAI is unavailable, the project falls back to local recommendation logic
-5. The user can add any recommended item directly to cart
+## 🛠️ Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Mst-Farzana/protesk-saas.git
+   cd protesk-saas
