@@ -335,27 +335,12 @@
                   No Image
                 </div>
 
-                <!-- ✅ CORRECTED: Interactive AI Badge Button -->
-                <button
-                  type="button"
-                  class="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-slate-950/80 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur shadow-lg transition-all duration-300 hover:bg-cyan-600 hover:scale-105 cursor-pointer group/badge"
-                  @click="searchSimilarProducts(item)"
-                  title="Find similar products"
+                <!-- AI Badge -->
+                <div
+                  class="absolute left-3 top-3 rounded-full bg-slate-950/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-3.5 w-3.5 text-cyan-400 transition-colors group-hover/badge:text-white"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                  <span>AI Pick</span>
-                </button>
+                  ✨ AI Pick
+                </div>
               </div>
 
               <!-- Content -->
@@ -717,25 +702,6 @@ const addRecommendedProduct = (item: AiRecommendation) => {
 };
 
 /* =========================================================
-   ✅ NEW: SEARCH SIMILAR PRODUCTS (AI Pick Click Action)
-========================================================= */
-const searchSimilarProducts = async (item: AiRecommendation) => {
-  aiQuery.value = `Recommend products similar to ${item.name}`;
-
-  await nextTick();
-
-  document.getElementById('ai-shopping')?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  });
-
-  await nextTick();
-  aiInput.value?.focus();
-
-  await loadAiRecommendations();
-};
-
-/* =========================================================
    AI RECOMMENDATIONS
 ========================================================= */
 
@@ -776,7 +742,7 @@ const loadAiRecommendations = async () => {
 
     /*
      * Backend imageUrl না পাঠালেও
-     * local catalog থেকে image নেওয়া হবে।
+     * local catalog থেকে image নেওয়া হবে।
      */
     aiRecommendations.value = recommendations
       .map(recommendation => {

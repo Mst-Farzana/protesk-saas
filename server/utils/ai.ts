@@ -122,7 +122,7 @@ export async function getAiProductRecommendations(
   const geminiKey = String(config?.geminiApiKey || config?.public?.geminiApiKey || '').trim();
 
   if (geminiKey) {
-    const geminiModel = String(config?.geminiModel || 'gemini-1.5-flash').trim(); // ✅ স্টেবল মডেল
+    const geminiModel = String(config?.geminiModel || 'gemini-3.7-flash').trim(); // ✅ স্টেবল মডেল
     try {
       return await geminiRecommendations(catalog, query, limit, geminiKey, geminiModel);
     } catch (err: any) {
@@ -219,8 +219,9 @@ async function geminiRecommendations(
 
   const prompt = `You are the AI shopping assistant for an e-commerce store.
 Recommend products only from the supplied catalog.
+
 Rules:
-1. Only recommend products that exist in the catalog.
+1. Only recommend products that exist in the supplied catalog.
 2. Never invent product IDs or prices.
 3. Never recommend products with stock <= 0.
 4. Respect the customer's budget.
@@ -229,6 +230,7 @@ Rules:
 7. Return ONLY valid JSON.
 
 Customer request: "${query}"
+
 Product catalog:
 ${catalogJson}
 
@@ -239,14 +241,27 @@ Return ONLY valid JSON in this exact format:
   ]
 }`;
 
-  // ✅ ৭. v1beta পরিবর্তন করে v1 করা হয়েছে
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+
         generationConfig: {
           temperature: 0.4,
           responseMimeType: 'application/json',
@@ -257,12 +272,21 @@ Return ONLY valid JSON in this exact format:
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Gemini ${response.status}: ${errText.slice(0, 200)}`);
+
+    throw new Error(`Gemini ${response.status}: ${errText.slice(0, 500)}`);
   }
 
-  const data = await response.json();
+  const data: any = await response.json();
+
+  if (data?.error) {
+    throw new Error(data.error.message || 'Gemini API error');
+  }
+
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  if (!text) return [];
+
+  if (!text) {
+    return [];
+  }
 
   return parseAndMap(catalog, text, limit);
 }
