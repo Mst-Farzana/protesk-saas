@@ -46,7 +46,7 @@ export default defineEventHandler(async event => {
       };
     }
 
-    const recommendations = await getAiProductRecommendations(products, query, 6);
+    const recommendations = await getAiProductRecommendations(products, query, 8, event);
 
     return {
       query,

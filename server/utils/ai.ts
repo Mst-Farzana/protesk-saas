@@ -1,4 +1,3 @@
-// server/utils/ai.ts
 import { createError } from 'h3';
 import { OpenAI } from 'openai';
 
@@ -70,14 +69,17 @@ const SYNONYMS: Record<string, string[]> = {
   gaming: ['console', 'controller', 'gaming', 'keyboard', 'mouse'],
 };
 
+// ✅ ১. event প্যারামিটার যোগ করা হয়েছে
 export async function getAiProductRecommendations(
   products: ProductInput[],
   query: string,
-  limit = 6
+  limit = 6,
+  event?: any
 ): Promise<AIRecommendation[]> {
   if (!products.length) return [];
 
-  const config = useRuntimeConfig() as any;
+  // ✅ ২. event পাস করা হয়েছে
+  const config = useRuntimeConfig(event);
 
   const availableProducts = products
     .filter(p => Number(p.stock ?? 0) > 0)
@@ -120,7 +122,7 @@ export async function getAiProductRecommendations(
   const geminiKey = String(config?.geminiApiKey || config?.public?.geminiApiKey || '').trim();
 
   if (geminiKey) {
-    const geminiModel = String(config?.geminiModel || 'gemini-2.0-flash').trim();
+    const geminiModel = String(config?.geminiModel || 'gemini-1.5-flash').trim(); // ✅ স্টেবল মডেল
     try {
       return await geminiRecommendations(catalog, query, limit, geminiKey, geminiModel);
     } catch (err: any) {
@@ -133,7 +135,7 @@ export async function getAiProductRecommendations(
 }
 
 /* ================================================================
-   OpenAI (gpt-5-mini)
+   OpenAI (gpt-4o-mini)
 ================================================================ */
 async function openAiRecommendations(
   apiKey: string,
@@ -146,41 +148,35 @@ async function openAiRecommendations(
 
   const systemPrompt = `
 You are the AI shopping assistant for an e-commerce store.
-
 Recommend products only from the supplied catalog.
-
 Rules:
 1. Only recommend products that exist in the catalog.
-2. Never invent product IDs.
-3. Never invent prices.
-4. Never recommend products with stock <= 0.
-5. Respect the customer's budget.
-6. Consider name, description, category, price, stock and use case.
-7. Return at most ${limit} products.
-8. Give a short reason for every recommendation.
-9. If nothing matches, return an empty recommendations array.
-
-Return ONLY valid JSON.
-
+2. Never invent product IDs or prices.
+3. Never recommend products with stock <= 0.
+4. Respect the customer's budget.
+5. Return at most ${limit} products.
+6. Give a short reason for every recommendation.
+7. Return ONLY valid JSON.
 Format:
 {
   "recommendations": [
     { "id": "product-id", "reason": "Short explanation" }
   ]
-}
-`;
+}`;
 
   let response;
   try {
-    response = await openai.responses.create({
-      model: 'gpt-5-mini',
-      input: [
+    // ✅ ৪. সঠিক API মেথড এবং ✅ ৫. সঠিক মডেল নাম
+    response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
         { role: 'system', content: systemPrompt },
         {
           role: 'user',
           content: `Customer request:\n${query}\n\nProduct catalog:\n${catalogJson}`,
         },
       ],
+      response_format: { type: 'json_object' },
     });
   } catch (error: any) {
     console.error('OpenAI recommendation error:', {
@@ -202,7 +198,8 @@ Format:
     });
   }
 
-  const text = response.output_text?.trim();
+  // ✅ ৬. সঠিক রেসপন্স পার্সিং
+  const text = response.choices[0]?.message?.content?.trim();
   if (!text) return [];
 
   return parseAndMap(catalog, text, limit);
@@ -221,9 +218,7 @@ async function geminiRecommendations(
   const catalogJson = JSON.stringify(catalog);
 
   const prompt = `You are the AI shopping assistant for an e-commerce store.
-
 Recommend products only from the supplied catalog.
-
 Rules:
 1. Only recommend products that exist in the catalog.
 2. Never invent product IDs or prices.
@@ -231,10 +226,9 @@ Rules:
 4. Respect the customer's budget.
 5. Return at most ${limit} products.
 6. Give a short reason for every recommendation.
-7. If nothing matches, return an empty recommendations array.
+7. Return ONLY valid JSON.
 
 Customer request: "${query}"
-
 Product catalog:
 ${catalogJson}
 
@@ -245,8 +239,9 @@ Return ONLY valid JSON in this exact format:
   ]
 }`;
 
+  // ✅ ৭. v1beta পরিবর্তন করে v1 করা হয়েছে
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -289,7 +284,7 @@ function localRecommendations(
       let score = 0;
       const name = p.name.toLowerCase();
       const category = (p.category ?? '').toLowerCase();
-      const description = p.description.toLowerCase();
+      const description = (p.description || '').toLowerCase(); // ✅ null safe
       const haystack = `${name} ${category} ${description}`;
 
       for (const t of tokens) {
@@ -354,7 +349,9 @@ function parseAndMap(catalog: CatalogItem[], text: string, limit: number): AIRec
 
   for (const candidate of candidates) {
     try {
-      parsed = JSON.parse(candidate);
+      // ✅ ৮. Trailing comma ফিক্স করা হয়েছে
+      const cleaned = candidate.replace(/,\s*\]/g, ']').replace(/,\s*\}/g, '}');
+      parsed = JSON.parse(cleaned);
       break;
     } catch {
       // continue to next candidate
@@ -373,7 +370,7 @@ function parseAndMap(catalog: CatalogItem[], text: string, limit: number): AIRec
   return recs
     .slice(0, limit)
     .map(item => {
-      if (!item.id || seenIds.has(item.id)) return null;
+      if (!item?.id || seenIds.has(item.id)) return null;
       const product = productMap.get(item.id);
       if (!product) return null;
       seenIds.add(item.id);

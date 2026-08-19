@@ -146,7 +146,8 @@ export default defineEventHandler(async event => {
           role: m.role as 'USER' | 'AI' | 'ADMIN',
           content: m.content,
         })),
-        message
+        message,
+        event
       );
     } catch (aiError: any) {
       aiFailed = true;
