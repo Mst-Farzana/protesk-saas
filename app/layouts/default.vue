@@ -9,13 +9,13 @@
       >
         <!-- Logo -->
         <NuxtLink to="/" class="flex shrink-0 items-center gap-2" aria-label="Protesk home">
-          <NuxtImg
-            src="/logo.png"
-            alt="Protesk logo"
-            width="36"
-            height="36"
-            class="h-10 w-10 object-contain"
-          />
+          <img
+          src="/logo.png"
+          alt="Protesk logo"
+          width="36"
+          height="36"
+          class="h-10 w-10 object-contain"
+        />
           <span class="hidden text-lg font-semibold text-cyan-600 dark:text-cyan-400 sm:block">
             Protesk
           </span>
@@ -306,13 +306,13 @@
           <!-- Brand + Social Icons -->
           <div>
             <NuxtLink to="/" class="inline-flex items-center gap-2" aria-label="Protesk home">
-              <NuxtImg
-                src="/logo.png"
-                alt="Protesk logo"
-                width="36"
-                height="36"
-                class="h-9 w-9 object-contain"
-              />
+              <img
+              src="/logo.png"
+              alt="Protesk logo"
+              width="36"
+              height="36"
+              class="h-10 w-10 object-contain"
+            />
               <span class="text-lg font-semibold text-cyan-600 dark:text-cyan-400">Protesk</span>
             </NuxtLink>
             <p class="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-400">
