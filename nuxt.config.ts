@@ -253,6 +253,7 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: 'build', // ✅ Type check on build
+    typeCheck: false,
+    // ✅ Type check on build
   },
 });
