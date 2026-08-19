@@ -1,13 +1,13 @@
 import { defineEventHandler, readBody } from 'h3';
 
 export default defineEventHandler(async event => {
-  // ✅ Pass event to useRuntimeConfig for better context isolation
+  // ✅ কনটেক্সট আইসোলেশনের জন্য event পাস করা হয়েছে
   const config = useRuntimeConfig(event);
   const { texts, target } = await readBody<{ texts: string[]; target: string }>(event);
 
   if (!texts?.length) {
     console.log('📭 [translate] No texts provided');
-    return { translations: texts || [] };
+    return { translations: [] };
   }
 
   console.log(`🤖 [translate] Received ${texts.length} strings to translate to ${target}`);
@@ -18,20 +18,20 @@ export default defineEventHandler(async event => {
     return { translations: texts };
   }
 
-  // ✅ ফলব্যাক মডেল gemini-1.5-flash করা হলো (সবচেয়ে স্থিতিশীল)
-  const model = config.geminiModel || 'gemini-1.5-flash';
+  // ✅ ফলব্যাক মডেল আপডেট করে gemini-3.7-flash করা হলো (সবচেয়ে নতুন ও শক্তিশালী)
+  const model = config.geminiModel || 'gemini-3.7-flash';
   console.log(`📡 [translate] Using model: ${model}`);
 
   const prompt =
     `Translate this JSON array of strings to ${target}. ` +
     `Keep the exact same order and length. ` +
-    `Return ONLY a valid JSON array of strings, with no markdown formatting or explanations.\n` +
+    `Return ONLY a valid JSON array of strings, with no markdown formatting, no code blocks, and no explanations.\n` +
     JSON.stringify(texts);
 
   try {
-    // ✅ Timeout setup (e.g., 15 seconds) to prevent serverless function hangs
+    // ✅ টাইমআউট ৩০ সেকেন্ড করা হলো (বড় অ্যারে অনুবাদের জন্য ১৫ সেকেন্ড কম হতে পারে)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
@@ -41,7 +41,7 @@ export default defineEventHandler(async event => {
         signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          // ✅ Native JSON mode ensures the output is always parseable JSON
+          // ✅ নেটিভ JSON মোড যাতে আউটপুট সবসময় পার্সযোগ্য JSON হয়
           generationConfig: {
             responseMimeType: 'application/json',
           },
@@ -71,15 +71,21 @@ export default defineEventHandler(async event => {
       return { translations: texts };
     }
 
-    // ✅ With responseMimeType: 'application/json', parsing is now much safer
-    // We still keep a fallback regex just in case the model adds minor text
-    const jsonMatch = raw.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.error('❌ [translate] No JSON array found in response. Raw:', raw);
+    // ✅ JSON পার্সিং আরও নিরাপদ করা হলো
+    let arr: any[] = [];
+    try {
+      const jsonMatch = raw.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        throw new Error('No JSON array found in response');
+      }
+
+      // মাঝে মাঝে LLM JSON-এর শেষে কমা (,) দিয়ে দেয়, যা পরিষ্কার করা
+      const cleanedJson = jsonMatch[0].replace(/,\s*\]/g, ']');
+      arr = JSON.parse(cleanedJson);
+    } catch (parseError) {
+      console.error('❌ [translate] JSON Parse Error:', parseError, 'Raw:', raw);
       return { translations: texts };
     }
-
-    const arr = JSON.parse(jsonMatch[0]);
 
     if (!Array.isArray(arr)) {
       console.error('❌ [translate] Response is not an array');
@@ -95,7 +101,7 @@ export default defineEventHandler(async event => {
     return { translations: arr };
   } catch (e: any) {
     if (e.name === 'AbortError') {
-      console.error('❌ [translate] Request timed out');
+      console.error('❌ [translate] Request timed out after 30s');
     } else {
       console.error('❌ [translate] Network/fetch error:', e.message || e);
     }
