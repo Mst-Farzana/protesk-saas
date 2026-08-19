@@ -122,7 +122,7 @@ export default defineNuxtConfig({
     // OpenAI - SERVER ONLY
     openaiApiKey: process.env.NUXT_OPENAI_API_KEY || process.env.OPENAI_API_KEY || '',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
-    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
 
     resendApiKey: process.env.NUXT_RESEND_API_KEY || '',
 
