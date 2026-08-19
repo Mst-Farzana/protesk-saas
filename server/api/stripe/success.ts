@@ -27,6 +27,7 @@ export default defineEventHandler(async event => {
   try {
     console.log('🔍 Fetching session:', sessionId);
 
+    // ✅ line_items expand করা হয়েছে যাতে আমরা জানতে পারি কোন প্রোডাক্টগুলো অর্ডার হয়েছে
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['line_items'],
     });
@@ -35,7 +36,7 @@ export default defineEventHandler(async event => {
     console.log('💰 Amount:', session.amount_total);
     console.log('👤 User:', session.metadata?.userId);
 
-    const userId = session.metadata?.userId || 'guest';
+    const userId = session.metadata?.userId === 'guest' ? null : session.metadata?.userId || null;
     const amount = session.amount_total ? session.amount_total / 100 : 0;
 
     // ✅ Check if order already exists (duplicate prevention)
@@ -53,17 +54,33 @@ export default defineEventHandler(async event => {
       };
     }
 
-    // ✅ CREATE ORDER
+    // ✅ প্রোডাক্টের লিস্ট তৈরি করা (Prisma OrderItem এর জন্য)
+    // ⚠️ নোট: আপনার prisma schema অনুযায়ী 'items', 'productId', 'name' ফিল্ডের নাম পরিবর্তন হতে পারে
+    const orderItems = (session.line_items?.data || []).map((item: any) => ({
+      productId: item.price?.product?.metadata?.productId || null,
+      name: item.description || 'Unknown Product',
+      price: (item.amount_total || 0) / (item.quantity || 1) / 100, // প্রতি ইউনিটের দাম
+      quantity: item.quantity || 1,
+    }));
+
+    // ✅ CREATE ORDER (with nested items creation)
     const order = await prisma.order.create({
       data: {
         userId,
         totalAmount: amount,
         status: 'PAID',
         stripeSessionId: session.id,
+        // ✅ অর্ডারের সাথে প্রোডাক্টগুলোও সেভ করা হচ্ছে
+        items: {
+          create: orderItems,
+        },
+      },
+      include: {
+        items: true, // রেসপন্সে আইটেমগুলোও পাঠানো হচ্ছে
       },
     });
 
-    console.log('✅ Order created:', order.id);
+    console.log('✅ Order created with items:', order.id);
 
     // ✅ CREATE TRANSACTION
     const transaction = await prisma.transaction.create({
@@ -81,6 +98,7 @@ export default defineEventHandler(async event => {
       success: true,
       orderId: order.id,
       amount,
+      items: order.items,
     };
   } catch (error: any) {
     console.error('❌ Success handler error:', error.message);

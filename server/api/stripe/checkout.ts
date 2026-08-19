@@ -1,12 +1,12 @@
 // server/api/stripe/checkout.post.ts
-import { createError, defineEventHandler, readBody } from 'h3';
+import { createError, defineEventHandler, getRequestURL, readBody } from 'h3'; // ✅ getRequestURL ইম্পোর্ট করুন
 import Stripe from 'stripe';
 import { prisma } from '../../utils/prisma';
 
 interface CartItem {
   id: string;
   name: string;
-  price: number | string; // ✅ Frontend string pathate pare
+  price: number | string;
   quantity: number | string;
   imageUrl?: string;
   productId?: string;
@@ -33,7 +33,6 @@ export default defineEventHandler(async event => {
   const body = await readBody<CheckoutBody>(event);
   const { items, userId } = body;
 
-  // ✅ Cart validation
   if (!items || !Array.isArray(items) || items.length === 0) {
     throw createError({
       statusCode: 400,
@@ -41,11 +40,9 @@ export default defineEventHandler(async event => {
     });
   }
 
-  // ✅ Line items build
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
   for (const item of items) {
-    // 🔧 Fix: Frontend string pathale o Number e convert hobe
     const price = Number(item.price);
 
     if (!item.name || !Number.isFinite(price) || price <= 0) {
@@ -58,7 +55,6 @@ export default defineEventHandler(async event => {
     const productId = item.productId || item.id || '';
     const quantity = Math.max(1, Number(item.quantity) || 1);
 
-    // ✅ DB থেকে latest price verify (যদি productId থাকে)
     let finalPrice = price;
     if (productId) {
       const dbProduct = await prisma.product
@@ -75,7 +71,6 @@ export default defineEventHandler(async event => {
         currency: 'usd',
         product_data: {
           name: item.name,
-          // 🔧 Fix: Stripe sudhu absolute URL (http/https) accept kore. Relative path ignore kora holo.
           images: item.imageUrl && item.imageUrl.startsWith('http') ? [item.imageUrl] : [],
           metadata: {
             productId: productId,
@@ -94,14 +89,17 @@ export default defineEventHandler(async event => {
     });
   }
 
-  const siteUrl = config.public.siteUrl || 'http://localhost:3000';
+  // ✅ ডাইনামিক বেস URL তৈরি (Localhost এবং Vercel দুটোতেই অটোমেটিক কাজ করবে)
+  const url = getRequestURL(event);
+  const baseUrl = `${url.protocol}//${url.host}`;
 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
-      success_url: `${siteUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/?canceled=true`,
+      // ✅ সঠিক পেজে (/checkout) রিডাইরেক্ট করা হচ্ছে যাতে ফ্রন্টএন্ডের লজিক কাজ করে
+      success_url: `${baseUrl}/checkout?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/checkout?canceled=true`,
       metadata: {
         userId: userId && userId !== 'guest-user' ? userId : 'guest',
       },

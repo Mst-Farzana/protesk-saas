@@ -1,4 +1,6 @@
 // composables/useSupportChat.ts
+import { onMounted, readonly, useState } from '#imports';
+
 interface ChatMessage {
   id: string;
   role: 'USER' | 'AI';
@@ -9,13 +11,13 @@ interface ChatMessage {
 const STORAGE_KEY = 'protesk_support_conversation';
 
 export const useSupportChat = () => {
-  // ✅ Global state — shob page theke access kora jabe
+  // ✅ Global state — সব পেজ থেকে অ্যাক্সেস করা যাবে
   const isOpen = useState('support-chat-open', () => false);
   const conversationId = useState<string | null>('support-chat-cid', () => null);
   const messages = useState<ChatMessage[]>('support-chat-messages', () => []);
   const isTyping = useState('support-chat-typing', () => false);
 
-  // ✅ LocalStorage theke purono conversation load
+  // ✅ LocalStorage থেকে পুরনো conversation load
   onMounted(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -68,16 +70,16 @@ export const useSupportChat = () => {
 
   const send = async (text: string) => {
     const content = text.trim();
-    if (!content) return;
+    if (!content || isTyping.value) return;
 
-    // ✅ User message add
+    // ✅ ১. User message add (Immutable way - Reactivity নিশ্চিত করতে)
     const userMsg: ChatMessage = {
       id: `u_${Date.now()}`,
       role: 'USER',
       content,
       timestamp: Date.now(),
     };
-    messages.value.push(userMsg);
+    messages.value = [...messages.value, userMsg]; // ✅ .push() এর বদলে এটি
     isTyping.value = true;
     persist();
 
@@ -90,26 +92,30 @@ export const useSupportChat = () => {
         },
       });
 
-      // ✅ Save conversationId for future messages
+      // ✅ ২. Save conversationId for future messages
       if (res.conversationId && !conversationId.value) {
         conversationId.value = res.conversationId;
       }
 
-      // ✅ AI response add
+      // ✅ ৩. AI response add (Immutable way)
       const aiMsg: ChatMessage = {
         id: `a_${Date.now()}`,
         role: 'AI',
         content: res.message || 'Sorry, no response received.',
         timestamp: Date.now(),
       };
-      messages.value.push(aiMsg);
+      messages.value = [...messages.value, aiMsg]; // ✅ .push() এর বদলে এটি
     } catch (err: any) {
-      messages.value.push({
-        id: `e_${Date.now()}`,
-        role: 'AI',
-        content: err?.data?.statusMessage || '⚠️ Failed to connect. Please try again later.',
-        timestamp: Date.now(),
-      });
+      // ✅ ৪. Error message add (Immutable way)
+      messages.value = [
+        ...messages.value,
+        {
+          id: `e_${Date.now()}`,
+          role: 'AI',
+          content: err?.data?.statusMessage || '⚠️ Failed to connect. Please try again later.',
+          timestamp: Date.now(),
+        },
+      ];
     } finally {
       isTyping.value = false;
       persist();
